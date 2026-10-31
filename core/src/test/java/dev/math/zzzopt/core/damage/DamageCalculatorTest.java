@@ -1,10 +1,12 @@
 package dev.math.zzzopt.core.damage;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@DisplayName("Cálculo de dano do módulo original")
 class DamageCalculatorTest {
 
     private void verificar(double mult, double dmgTotal, int stacks, double esperado) {
@@ -26,7 +28,8 @@ class DamageCalculatorTest {
         assertEquals(esperado, resultado, esperado * 0.02); // tolerância de 2%
     }
 
-    @ParameterizedTest
+    @DisplayName("Deve reproduzir o dano dos ataques carregados dentro da tolerância de 2%")
+    @ParameterizedTest(name = "Multiplicador {0}, bônus de dano {1}: dano esperado {2}")
     @CsvSource({
             // multiplicador, bônus de dano total, dano do vídeo
             "11.631, 1.33, 1469126",   // hold2
@@ -40,7 +43,8 @@ class DamageCalculatorTest {
         verificar(mult, dmgTotal, 3, esperado);
     }
 
-    @ParameterizedTest
+    @DisplayName("Deve reproduzir o dano dos ataques em cadeia e EX dentro da tolerância de 2%")
+    @ParameterizedTest(name = "Multiplicador {0}, bônus de dano {1}: dano esperado {2}")
     @CsvSource({
             "18.017, 0.58, 1543213",   // chain1 (40 do sup1 + 18 do sup2)
             "18.017, 0.40, 1367404",   // chain2 (só o 40 do sup1)
@@ -50,7 +54,8 @@ class DamageCalculatorTest {
         verificar(mult, dmgTotal, 3, esperado);
     }
 
-    @ParameterizedTest
+    @DisplayName("Deve reproduzir o dano das ultimates com os stacks informados dentro da tolerância de 2%")
+    @ParameterizedTest(name = "Multiplicador {0}, bônus de dano {1}, stacks {2}: dano esperado {3}")
     @CsvSource({
             // multiplicador, bônus, stacks, dano do vídeo
             "41.808, 0.58, 2, 3502976",   // ult, run nova
