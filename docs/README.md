@@ -1,24 +1,44 @@
 # Documentação do projeto
 
-Esta documentação consolida as decisões tomadas com o usuário. O [README principal](../README.md)
-apresenta o projeto ao público; aqui ficam os detalhes necessários para desenvolver cada etapa.
+O [README público](../README.md) apresenta o projeto. Aqui estão comportamento, implementação,
+decisões e evidências, separados segundo SDD.
 
-| Documento | Conteúdo |
+## Ordem de leitura e autoridade
+
+| Documento | Papel |
 |---|---|
-| [Regras de negócio](business-rules.md) | Objetivo da v1, inventário, ficha, conjuntos, filtros e ciclo das execuções |
-| [Contratos](contracts.md) | Modelos atuais, convenções de dados e limites do contrato HTTP ainda não implementado |
-| [Arquitetura e etapas](architecture-and-roadmap.md) | Stack, organização, persistência, concorrência, experimentos e evolução |
-| [Referência da Aria](aria-reference.md) | Cenário real de validação e pendência de precisão |
-| [AGENTS.md](../AGENTS.md) | Permissões, restrições, proibições e instruções de colaboração para agentes de IA |
+| [Spec: regras de negócio](business-rules.md) | Fonte normativa do comportamento aprovado, RF-01 a RF-18 e perguntas abertas |
+| [Contrato de entrada e saída](contracts.md) | Convenções externas acordadas; propostas HTTP claramente marcadas |
+| [Plano técnico](architecture-and-roadmap.md) | Stack, dados, schema, algoritmos, concorrência e dependências |
+| [Decisões (ADR)](decisions.md) | Contexto, decisão/proposta, alternativas e quando revisitar |
+| [Critérios de aceite](acceptance-criteria.md) | Cenários verificáveis ligados aos testes e às lacunas |
+| [Tarefas](tasks.md) | Trabalho pequeno, ordenado, com bloqueios e critério de pronto |
+| [Estado implementado](implementation-status.md) | O que existe e evidências anteriores, sem confundir decisão com entrega |
+| [AGENTS.md](../AGENTS.md) | Permissões, proibições e fluxo obrigatório para agentes |
 
-## Como interpretar o estado das decisões
+## Referências de dados e operação
 
-- **Implementado:** comportamento presente no código atual.
-- **Acordado para a v1:** requisito definido, mas não necessariamente implementado.
-- **Planejado:** direção de implementação ou experimento, ainda sujeito à etapa correspondente.
-- **Pendente:** ponto que precisa ser fechado; não presumir uma resposta definitiva.
-- **Fora da v1:** não implementar antecipadamente.
+| Documento | Papel |
+|---|---|
+| [Referência da Aria](aria-reference.md) | Cenário fornecido pelo usuário e divergência conhecida de precisão |
+| [Personagens](catalog.md) | Dados, exceções, unidades e correções da base crua/passiva |
+| [Motores](w-engines.md) | Atributos básicos/avançados e unidades confirmadas |
+| [Conjuntos](disc-sets.md) | IDs, efeitos, máximos condicionais e dúvidas para o cálculo de dano futuro |
+| [Referência interna do core](core-reference.md) | Modelos Java e validações existentes, sem definir API HTTP |
+| [Operação do catálogo](catalog-operations.md) | Aplicação/teste em Docker, fases V1/V2/V3 e condições de reset |
 
-Quando houver uma nova decisão do usuário, atualizar o documento correspondente. Se ela afetar
-permissões ou proibições de trabalho, atualizar também o `AGENTS.md`. Os contratos HTTP não devem
-ser considerados publicados apenas porque há exemplos nesta documentação.
+## Fluxo de mudança
+
+Mudança de comportamento: primeiro spec/contrato aprovado, depois plano/ADR, depois tarefa,
+só então código. Uma tarefa por vez. Verificar aceite e atualizar o estado ao concluir.
+A existência de uma tarefa não autoriza executá-la; perguntas abertas não são respondidas por
+implementação. Testes consolidados exigem autorização específica para alteração.
+
+- Aceito/aprovado: decisão vigente, não necessariamente implementada.
+- Proposto: alternativa ainda sem aprovação.
+- Implementado/verificado: evidência de execução ou código existente, com limites explícitos.
+- Pendente/bloqueado: informação ou decisão necessária antes da tarefa dependente.
+
+Dados e fórmulas não confirmados do jogo permanecem perguntas. Não usar uma duplicação em
+plano, fixture ou JSON como nova fonte de requisito. O catálogo é a fonte dos valores
+versionados; a spec é a fonte do comportamento.

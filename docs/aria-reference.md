@@ -3,7 +3,9 @@
 Dados fornecidos pelo usuário no jogo. Personagem no nível 60, com passiva maximizada;
 motor no nível máximo; seis discos de rank S e aprimoramento 15. Classe Anômalo, elemento Éter.
 
-A fonte executável deste cenário é `core/src/test/java/dev/math/zzzopt/core/build/AriaFixture.java`.
+A fixture executável deste cenário está em
+[AriaFixture.java](../core/src/test/java/dev/math/zzzopt/core/build/AriaFixture.java).
+As regras normativas estão na [spec](business-rules.md); a fixture é evidência de implementação.
 Os dados não representam um catálogo completo ou uma consulta externa ao jogo.
 
 ## Base e motor

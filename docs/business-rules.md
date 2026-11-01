@@ -1,139 +1,251 @@
-# Regras de negócio
+# Spec: regras de negócio
 
-## 1. Objetivo da v1
+Este documento é a fonte normativa do comportamento aprovado do produto. Uma regra aqui
+não significa que já esteja implementada; consultar o [estado verificado](implementation-status.md).
+O [contrato de entrada e saída](contracts.md) complementa esta spec. O
+[plano técnico](architecture-and-roadmap.md) explica a implementação, os
+[ADRs](decisions.md) registram escolhas e a [matriz de aceite](acceptance-criteria.md)
+liga regras a evidências. Perguntas abertas não são requisitos aprovados.
 
-Receber um inventário de discos e filtros, com personagem e motor fixos, e encontrar todas as
-combinações válidas de seis discos dentro dos limites explícitos da execução. Cada resultado
-identifica as seis peças e seus atributos finais de ficha.
+## Objetivo e escopo
 
-A v1 não identifica a melhor build por dano. Distribuição livre de rolls é outra área futura;
-o problema atual é a combinação de peças concretas do inventário. O scanner de outro jogo
-foi utilizado somente como referência de estrutura de dados.
+### RF-01 — Enumerar builds elegíveis
 
-## 2. Catálogo e entrada do usuário
+Receber o inventário de discos do usuário, personagem, motor e filtros. Encontrar todas as
+combinações válidas de seis peças dentro dos limites explícitos da execução e devolver os
+atributos de ficha e a identificação das seis peças de cada build.
 
-- O catálogo interno descreve personagens, motores e conjuntos. Não é um inventário pessoal.
-- O inventário e os filtros são enviados pelo usuário em JSON.
-- O personagem é considerado no nível máximo, com os acréscimos permanentes da passiva principal
-  maximizada já incorporados à base. Não somar esses acréscimos novamente.
-- O motor é considerado no nível máximo. Refinamento não participa do cálculo de atributos base
-  neste recorte; efeitos de combate do motor não entram na ficha.
-- Passivas e skills dependentes de condições de combate serão modeladas na etapa de dano.
-- Classe e elemento são informações do personagem; não determinam filtros ou prioridades
-  obrigatórios. Não presumir que toda uma classe precisa dos mesmos atributos.
+A v1 não calcula dano, score ou ranking. Uma build de atributos inferiores a outra ainda é
+um resultado válido se passar nos filtros. Não eliminar peças distintas por produzirem a
+mesma ficha. Uma execução interrompida não pode ser apresentada como enumeração completa.
 
-## 3. Inventário e identidade das peças
+### RF-02 — Condição dos personagens e motores
 
-- Cada disco informa `id`, `gear`, `set`, `rank`, `enhance`, `main` e `substats`.
-- O ID pode ser gerado pelo usuário ou pelo gerador de entradas. No contrato atual, é uma string.
-- O ID deve ser único dentro do inventário recebido, sem exigir unicidade global entre usuários.
-- Duas peças com atributos idênticos e IDs diferentes continuam sendo duas peças distintas.
-- Utilizar os valores atuais dos atributos. Não exigir rolls nem simular aprimoramentos futuros.
-- Aceitar peças parcialmente aprimoradas, respeitadas as validações suportadas.
-- Dados ausentes ou inválidos devem ser informados ao cliente, com identificação da peça e do
-  campo quando possível. Não descartar peças inválidas silenciosamente.
-- A peça estar equipada em outro personagem não é uma restrição da v1; não exigimos esse vínculo.
-- Uma build possui seis peças distintas, exatamente uma de cada slot de 1 a 6.
+Considerar personagens no nível máximo e com passiva maximizada e motores no nível máximo.
+Não modelar progressão por nível nem exigir o histórico dos rolls dos discos. Usar os valores
+atuais das peças, inclusive parcialmente aprimoradas. Refinamento do motor não altera seus
+atributos básicos neste recorte.
 
-## 4. Atributos e montagem da ficha
+O catálogo descreve personagens, motores e conjuntos; não representa o inventário pessoal.
+A base crua e os bônus totais da passiva são informações distintas. Efeitos de combate de
+personagens e motores ficam fora da ficha da v1.
 
-Para atributos sujeitos a bônus relativos à base:
+## Ficha e unidades
+
+### RF-03 — Distinguir unidades
+
+Atributos absolutos e percentuais são diferentes. Percentuais usam 55 para representar 55%.
+Um percentual relativo à base não é um acréscimo em pontos percentuais a uma taxa.
+
+No atributo avançado do motor, ATQ, PV, DEF, Impacto, recuperação de energia e Maestria são
+percentuais relativos; Proficiência é absoluta; taxa crítica, dano crítico e taxa de
+perfuração são acréscimos em pontos percentuais. Atributos básicos de ATQ/DEF são absolutos.
+Não inferir a unidade pelo tamanho do número. Perfuração flat e taxa de perfuração são distintas.
+
+O motor mantém um papel básico e um avançado, sem repetir parcelas do mesmo papel. O básico
+altera a base e é absoluto; o avançado mantém sua unidade e incide na ficha. Unificar sua
+representação não pode confundir esses papéis nem alterar os valores ou resultados.
+
+### RF-04 — Compor a base e aplicar os bônus uma única vez
+
+Para atributos sujeitos a percentuais relativos:
 
 ```text
-Ficha = Base × (1 + soma dos bônus percentuais / 100) + soma dos bônus flat
+Base composta = base crua do personagem
+              + acréscimos da passiva que alteram a base
+              + atributo básico correspondente do motor, quando fornecido
+
+Ficha = Base composta × (1 + soma dos percentuais de ficha / 100)
+      + soma dos acréscimos absolutos de ficha
 ```
 
-Para ATQ, a base inclui o ATQ base do personagem na condição acordada e o ATQ básico do motor.
-Nos demais atributos, utilizar a base correspondente do personagem e os bônus suportados.
-Incrementos diretos em taxas, como taxa crítica e dano crítico, são somados em pontos percentuais;
-não tratá-los como multiplicadores da taxa base.
+Os bônus da passiva que alteram a base entram antes dos multiplicadores. Bônus percentuais
+da passiva que modificam a ficha somam aos percentuais dos itens. Incrementos diretos em
+taxas somam pontos percentuais, sem multiplicar a taxa base. Nenhuma parcela pode ser aplicada
+duas vezes.
 
-- Percentuais usam pontos percentuais: `55` significa `55%`, tanto nos dados do modelo atual
-  quanto na ficha retornada pelo `core`. Não aceitar unidades ambíguas por inferência do valor.
-- Atributos flat e percentuais são distintos, inclusive perfuração flat e taxa de perfuração.
-- Incluir bônus de dano elemental na ficha, mesmo que também sejam utilizados futuramente no dano.
-- O modelo não deve restringir os atributos da ficha com base na classe do personagem.
-- Aplicar apenas efeitos de ficha; efeitos de combate não modificam os resultados da v1.
-- A montagem deve ser reutilizável pela busca e pelo futuro cálculo de dano.
+Os [dados do catálogo](catalog.md) distinguem base crua, acréscimos à base e modificadores
+de ficha. Não presumir +75 ATQ para todos os personagens. A separação confirmada da Anby,
+os percentuais da Sunna/Manato/Zhao e o acréscimo de PV da Yixuan devem ser preservados.
 
-O `core` atual usa `BigDecimal` e preserva os decimais. Não existe regra geral de arredondamento
-do jogo confirmada. Na [referência da Aria](aria-reference.md), o PV calculado é `10181.47`, enquanto
-o usuário confirmou `10182` no jogo. O ATQ base 863 já inclui `788 + 3 × 25` da passiva; ela não
-ganha PV nessa passiva. Não criar correções artificiais para encaixar a exibição observada.
+### RF-05 — Preservar precisão e não inventar tetos
 
-**Pendente:** política de comparação nos limites dos futuros filtros e reprodução da exibição.
-A tolerância de 2% dos testes legados de dano não é uma tolerância aprovada para a ficha ou filtros.
+Não impor teto automático de atributos, inclusive taxa crítica de 100% ou 200%.
+Não arredondar ou ajustar valores para reproduzir uma exibição do jogo sem uma regra confirmada.
 
-## 5. Conjuntos e efeitos
+A [referência da Aria](aria-reference.md) preserva o cálculo decimal e a exibição informada
+pelo usuário. A divergência de PV não autoriza alterar a fórmula nem introduzir tolerância.
+A política de comparação dos filtros na fronteira continua aberta em Q-01.
 
-- Contar peças pela identidade do conjunto, nunca pela igualdade de seu efeito.
-- Uma peça de A e uma de B não ativam um bônus de duas peças, mesmo que A e B concedam o mesmo bônus.
-- Cada efeito pertence a um conjunto e informa quantidade necessária de peças e contexto.
-- Contextos atuais: `SHEET` (ficha) e `COMBAT` (combate).
-- O requisito de peças e o contexto são independentes: quatro peças também podem conceder bônus
-  de ficha; não assumir que todo efeito de quatro peças é condicional.
-- Ao atingir quatro peças, avaliar tanto os efeitos de duas quanto os de quatro peças.
-- Cada efeito é aplicado uma vez ao atingir seu requisito, não uma vez a cada grupo de duas peças.
-- Um bônus com parte fixa e parte condicional pode ter efeitos separados com o mesmo requisito.
-- Efeitos de combate podem ter descrição sem fórmula implementada. Não interpretar descrições
-  como código nem considerar que todos os efeitos futuros já estão modelados.
+### RF-06 — Preservar atributos e recursos distintos
 
-## 6. Filtros da busca
+Incluir bônus de dano elemental na ficha. Não restringir a representação dos atributos
+somente pela classe do personagem.
 
-Requisitos acordados para a v1, ainda não implementados:
+Rupture usa adrenalina; recuperação de energia não aumenta o acúmulo de adrenalina.
+Sheer Force é um atributo próprio; seu valor zero na origem não representa um cálculo
+da build. Não presumir uma fórmula de ATQ/PV ou simular essa classe com 100% de perfuração.
 
-- Seleção opcional de conjuntos de quatro e duas peças.
-- Alternativas aceitas: quatro peças de A **ou** B, combinadas com duas de C **ou** D.
-- Composição alternativa `2+2+2`, com prioridade menor de implementação, mas dentro do escopo.
-- Atributo principal opcional para cada um dos slots 4, 5 e 6.
-- Atributos principais fixos: slot 1 PV flat; slot 2 ATQ flat; slot 3 DEF flat.
-- Limite mínimo e, opcionalmente, máximo por atributo. Validar mínimo não maior que máximo.
-- Só aplicar máximo quando informado pelo usuário. Não impor teto de taxa crítica de 100%,
-  200% ou qualquer outro valor por classe ou por uma regra presumida do jogo.
-- Máximo é uma condição de elegibilidade: uma build acima dele é excluída; seu valor não é reduzido.
-- Sem slider de prioridade ou ranking na v1. Prioridades não substituem restrições obrigatórias.
+Armorer usa Sharpness e possui Laceration DMG, distintos de energia e dano crítico normal.
+A conversão de dano crítico normal em taxa crítica ainda depende de proporção, condições e
+parcelas fornecidas pelo usuário. Não inventar essa fórmula.
 
-Na pré-filtragem, remover peças incompatíveis com os atributos principais selecionados.
-Só remover outros conjuntos quando isso preservar todas as composições permitidas. Por exemplo,
-ao exigir apenas quatro peças de A, as duas peças restantes podem vir de outros conjuntos.
-Selecionar alternativas também exige preservar a união das composições admitidas.
+Campo ausente, zero informado e atributo ainda não suportado são situações diferentes.
+Não omitir informação necessária e apresentar a ficha como completa. A resposta pública
+para dados incompletos ou mecânicas não suportadas está aberta em Q-06.
 
-Não descartar builds válidas por terem atributos menores que outra build. Peças distintas podem
-produzir fichas iguais e ainda assim constituir resultados distintos. A promessa de retornar todas
-as builds impede aplicar eliminação por dominância como se fosse uma busca apenas da melhor.
+## Inventário
 
-## 7. Execuções, transmissão e histórico
+### RF-07 — Identidade das peças e composição
 
-Requisitos acordados para a aplicação web futura:
+Cada disco informa `id`, `gear`, `set`, `rank`, `enhance`, `main` e `substats`.
+O ID da peça é único dentro do inventário recebido, sem exigência de unicidade global.
+Duas peças de atributos iguais e IDs diferentes continuam sendo duas peças distintas.
 
-- Executar a busca em segundo plano, inicialmente no processo Java da aplicação.
-- Transmitir resultados incrementalmente em lotes, sem acumular toda a busca em uma lista na RAM.
-- Limitar buffers; se o consumidor for lento, controlar a produção sem crescimento ilimitado
-  nem descarte silencioso de resultados que deveriam ser entregues.
-- Identificar conclusão completa, cancelamento, falha e interrupção por limite de recurso.
-  Uma busca interrompida não pode ser apresentada como enumeração completa.
-- Impor limites por usuário e execução, inclusive concorrência, tempo e volume de saída.
-  Valores numéricos ainda não foram definidos.
-- Guardar registros/metadados de execução para histórico, não os resultados das builds.
-- Não assumir persistência do inventário pessoal. Campos exatos e retenção do histórico estão pendentes.
-- Quando a desconexão do consumidor for detectada, solicitar cancelamento cooperativo da busca
-  e liberar recursos. Não confundir conclusão normal do stream com cancelamento.
-- Perda isolada de pacote ou atraso recuperável não equivale automaticamente a desconexão.
-- Detecção de desconexão pode depender de erros e timeouts; parâmetros serão definidos na implementação.
-- Não implementar retenção de lotes para replay, retomada após reconexão ou restauração de resultados.
-- Uma nova execução recalcula os resultados. No futuro, o frontend poderá guardar configuração
-  e inventário no navegador para reenviar o pedido; isso não é uma restauração do job anterior.
+Uma build contém seis peças distintas, exatamente uma de cada slot de 1 a 6. A peça estar
+equipada em outro personagem não é uma restrição da v1; esse vínculo não é obrigatório.
 
-O usuário pode ter vários pedidos, por agente ou mudança de filtro. Foi proposta a regra de que
-um novo pedido substitui/cancela o anterior, mas o **escopo exato da substituição está pendente**:
-por usuário, agente ou configuração/build. Não implementar cancelamento global por suposição.
+### RF-08 — Validação estrutural dos discos
 
-## 8. Fora da v1
+Slots 1, 2 e 3 têm como atributo principal, respectivamente, PV absoluto, ATQ absoluto e DEF
+absoluta. Uma peça tem no máximo quatro subatributos, sem repetir o mesmo tipo nem o tipo
+do atributo principal. Flat e percentual do mesmo atributo são tipos distintos.
 
-- Cálculo e classificação por dano, rotação e efeitos condicionais de combate.
-- Distribuição livre de rolls como pool abstrato.
-- Importação automática, scanner e reconhecimento de screenshots/OpenCV.
-- Captura de tráfego e leitura de memória do jogo não fazem parte da solução.
-- Interface elaborada, nuvem e Kubernetes.
-- Contêiner dedicado criado dinamicamente para cada tarefa.
-- Persistência de builds, replay e restauração de resultados de jobs anteriores.
+A faixa inicial suportada de aprimoramento é 0 a 15 e os ranks de disco são B, A e S.
+Isso não afirma que todo tipo e valor seja possível em todos os slots/ranks. A tabela completa
+de legalidade depende dos dados do jogo e permanece aberta em Q-05.
+
+Itens inválidos não podem ser descartados silenciosamente. Informar a peça e o campo afetado
+quando possível. A política de rejeição do pedido e agregação dos erros está aberta em Q-04.
+
+## Conjuntos e filtros
+
+### RF-09 — Ativar efeitos pela identidade do conjunto
+
+Contar peças do mesmo conjunto. Uma peça de A e uma de B não ativam um bônus de duas peças,
+mesmo quando seus efeitos são iguais. Aplicar cada efeito uma vez ao atingir o requisito,
+sem reaplicá-lo para cada grupo de duas peças.
+
+Ao atingir quatro peças, avaliar os requisitos de duas e quatro peças. Requisito de peças e
+contexto do efeito são independentes: o modelo admite parcelas de ficha e combate com o mesmo
+requisito. Somente efeitos de ficha participam do cálculo da v1.
+
+Nos 30 conjuntos fornecidos, todos os 4-PC são de combate. Também são de combate os 2-PC de
+Dawn's Bloom, King of the Summit, Shadow Harmony e Proto Punk; os outros 26 são de ficha.
+Essa classificação não generaliza automaticamente conjuntos futuros. Preservar descrições,
+condições e máximos condicionais para a futura etapa de dano; não aplicá-los como constantes.
+
+### RF-10 — Selecionar filtros explicitamente
+
+Permitir seleção opcional de conjuntos de quatro e duas peças, com alternativas:
+quatro peças de A ou B combinadas com duas de C ou D. A composição 2+2+2 faz parte da v1,
+com prioridade menor de implementação. A representação inequívoca e os casos sobrepostos
+estão abertos em Q-02.
+
+Permitir escolher o atributo principal dos slots 4, 5 e 6 e limites mínimos e máximos de
+atributos. Máximo é opcional e só existe quando informado. Rejeitar mínimo maior que máximo.
+Uma build acima do máximo informado é excluída; seu atributo não é reduzido ao máximo.
+
+Não escolher prioridades obrigatórias pela classe. Slider de prioridade e ranking ficam
+fora da v1; filtros obrigatórios não são substituídos por um score.
+
+### RF-11 — Preservar todas as composições admitidas
+
+Restrições de conjuntos e principais não podem causar perda de builds elegíveis.
+Se o usuário exige somente quatro peças de A e não seleciona um conjunto de duas peças,
+as duas peças restantes podem vir de outros conjuntos. Alternativas devem preservar a união
+das composições admitidas. Não excluir candidatos por dominância de atributos.
+
+## Catálogo
+
+### RF-12 — Preservar identidade, idioma e origem
+
+Preservar IDs numéricos fornecidos para personagens, motores e conjuntos. Nomes e traduções
+não definem identidade. IDs das peças pessoais pertencem a outro domínio e continuam strings.
+A representação pública da seleção de personagem/motor está aberta em Q-13.
+
+Preservar o rank I e o símbolo de infinito de Pyrois, distintos dos ranks de disco.
+Os ranks aceitos são A/S/I para personagens e B/A/S para motores, cada domínio validado
+separadamente. Não aceitar um rank de outro domínio. Novo rank exige decisão explícita.
+Preservar elementos variantes e sua relação com o básico sem presumir herança de bônus ou
+fórmulas. Não inventar traduções, atributos, estágios de lançamento ou dados das collabs ausentes.
+Dados de beta e nomes provisórios podem mudar; manter essa condição explícita.
+
+A carga inicial usa os dados enviados manualmente pelo usuário. Não coletar automaticamente
+dados do site mencionado. Os detalhes e correções estão nas referências de
+[personagens](catalog.md), [motores](w-engines.md) e [conjuntos](disc-sets.md).
+
+## Execuções e resultados
+
+### RF-13 — Entregar resultados progressivamente
+
+Transmitir builds incrementalmente em lotes sem acumular todos os resultados em memória.
+Se o consumidor for lento, controlar a produção com buffers limitados, sem descarte silencioso.
+Tamanho dos lotes, limite do buffer e política de conexão estão abertos em Q-09 e Q-10.
+
+Cada resultado deve permitir identificar suas seis peças e conhecer seus atributos de ficha.
+Não há ordenação por qualidade nem cálculo de dano na v1.
+
+### RF-14 — Informar o término corretamente
+
+Distinguir conclusão completa, cancelamento, falha e interrupção por limite de recurso.
+Não apresentar uma execução interrompida como completa. Estados públicos, transições, motivos
+e resolução das disputas entre término/cancelamento estão abertos em Q-08.
+
+Um novo pedido poderá substituir outro conforme a regra ainda aberta em Q-07; não assumir
+cancelamento global por usuário.
+
+### RF-15 — Cancelar após desconexão detectada
+
+Ao detectar desconexão do consumidor, solicitar cancelamento cooperativo e liberar recursos.
+Perda isolada de pacote ou atraso recuperável não equivale automaticamente a desconexão.
+Detecção e prazo de liberação dependem dos parâmetros ainda abertos em Q-09 e Q-10.
+
+Não implementar replay, retomada por lote nem restauração das builds. Uma nova execução recalcula.
+Uma interface futura poderá guardar configuração e inventário no navegador para reenviar;
+isso não restaura o job anterior.
+
+### RF-16 — Limitar concorrência e recursos
+
+Permitir processamento para vários usuários, com limites por usuário e execução, incluindo
+concorrência, tempo e volume de saída. Não ultrapassar um limite por causa de pedidos simultâneos.
+Os valores e o comportamento de admissão estão abertos em Q-10.
+
+Autenticação e autorização devem existir antes da exposição como serviço multiusuário público.
+Acesso a execuções e operações permitidas precisam ser fechados em Q-11.
+
+### RF-17 — Guardar somente o histórico necessário
+
+Persistir registros/metadados das execuções, sem persistir resultados das builds na v1.
+Não exigir inventário pessoal persistente. Campos, retenção e conteúdo dos registros estão
+abertos em Q-12. Toda validação autoritativa e regra de negócio pertence ao backend.
+
+## Fora da v1
+
+RF-18: cálculo/classificação por dano, rotações e efeitos de combate; distribuição livre de rolls;
+importação automática e scanner; interface elaborada; nuvem e Kubernetes; contêiner por job;
+persistência de builds e replay. Não capturar tráfego nem ler memória do jogo.
+
+## Perguntas abertas
+
+Nenhuma resposta abaixo está presumida. Resolver a pergunta antes da tarefa dependente.
+
+| ID | Pergunta |
+|---|---|
+| Q-01 | Os limites são inclusivos? Comparam decimal calculado ou exibição? Um intervalo pode informar somente máximo? |
+| Q-02 | Como representar 4+2/2+2+2 e alternativas? Aceitar sobreposição do mesmo conjunto? Quais composições sem filtros? |
+| Q-03 | Inventário vazio, slot sem candidatos e busca sem solução são erro ou conclusão com zero builds? |
+| Q-04 | Um item inválido rejeita todo o pedido? Agregar todos os erros? Qual formato externo? |
+| Q-05 | Quais principais/subatributos, valores e aprimoramentos são legais por slot e rank? |
+| Q-06 | Qual resposta para dados incompletos ou personagens/mecânicas ainda não suportados? Quais fórmulas faltantes entram na v1? |
+| Q-07 | Novo pedido substitui execução por usuário, personagem ou configuração? |
+| Q-08 | Quais estados/transições/motivos, regras de cancelamento explícito, disputa com conclusão e reinício da aplicação? |
+| Q-09 | O que ocorre se o stream nunca conectar, conectar tarde ou tiver mais de um consumidor? Qual timeout de desconexão? |
+| Q-10 | Quais limites de entrada, tempo, concorrência, buffers e saída? Qual prazo de cancelamento e resposta ao atingir limites? |
+| Q-11 | Quem consulta/cancela cada execução? Como identificar o usuário e responder a acesso não permitido? |
+| Q-12 | Quais metadados, retenção e dados de diagnóstico são guardados, sem persistir builds/inventário? |
+| Q-13 | Personagem/motor serão selecionados por ID ou nome? Qual envelope e quais tipos públicos de atributos? |
+| Q-14 | Qual idioma padrão e fallback quando não houver tradução? |
+| Q-15 | Qual regra de uso de motor de outra especialidade? |
+| Q-16 | Qual referência de versão do catálogo vale para uma execução durante uma atualização? |
+| Q-17 | Há garantia de ordem dos resultados ou apenas do conjunto de builds elegíveis? |

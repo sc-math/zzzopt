@@ -21,14 +21,18 @@ transmiti-los progressivamente com consumo de memória controlado.
 - Ativação de conjuntos pela identidade e quantidade das peças, incluindo composições 2+2+2.
 - Cálculo decimal com `BigDecimal` e testes unitários sobre uma build real de referência.
 - `core` independente de frameworks web e de persistência.
+- Estrutura do catálogo com IDs numéricos, nomes por idioma, elementos variantes e separação
+  de base e passiva, usando Flyway e PostgreSQL em Docker Compose; carga inicial com 63 personagens,
+  102 motores e 30 conjuntos, verificada por testes de integração SQL.
 
 **Tecnologias atuais:** Java 25, Maven Wrapper e JUnit 6.
+Infraestrutura do catálogo: PostgreSQL e Flyway em containers. Integração JPA permanece planejada.
 
 ## Em desenvolvimento
 
 1. Busca de referência, filtros e geração de entradas reproduzíveis.
 2. Poda, benchmarks e comparação de estratégias de paralelismo.
-3. API Spring Boot, PostgreSQL, JPA, Flyway, Docker Compose e resultados em streaming.
+3. API Spring Boot, integração JPA do catálogo, registros de execução e resultados em streaming.
 
 O isolamento em worker Java e o uso de RabbitMQ serão avaliados com medições de carga.
 Ainda não há API executável nem números de benchmark publicados.
@@ -45,9 +49,15 @@ Os testes possuem descrições em português com `@DisplayName`. A [referência 
 documenta os dados utilizados e a diferença conhecida entre o cálculo decimal do PV e a exibição
 do jogo. Os testes legados de dano permanecem separados da engine de ficha.
 
+Para inicializar o catálogo ou executar a verificação isolada em PostgreSQL, veja as
+[instruções de operação](docs/catalog-operations.md).
+
 ## Documentação
 
 - [Regras de negócio](docs/business-rules.md)
 - [Contratos e convenções de dados](docs/contracts.md)
+- [Catálogo: dados e idiomas](docs/catalog.md)
+- [Critérios de aceite e testes](docs/acceptance-criteria.md)
+- [Decisões de arquitetura e processo](docs/decisions.md)
 - [Arquitetura, etapas e experimentos planejados](docs/architecture-and-roadmap.md)
 - [Índice da documentação](docs/README.md)
