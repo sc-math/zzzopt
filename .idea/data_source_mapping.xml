@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourcePerFileMappings">
+    <file url="file://$PROJECT_DIR$/db/checks/agent-base-stats.sql" value="4c039354-a9b9-43e2-8135-dc9b42722ea8" />
+    <file url="file://$PROJECT_DIR$/db/checks/catalog-snapshot.sql" value="4c039354-a9b9-43e2-8135-dc9b42722ea8" />
+    <file url="file://$PROJECT_DIR$/db/checks/catalog-v3.sql" value="4c039354-a9b9-43e2-8135-dc9b42722ea8" />
+    <file url="file://$PROJECT_DIR$/db/migration/V3__simplify_ranks_and_w_engine_stats.sql" value="4c039354-a9b9-43e2-8135-dc9b42722ea8" />
+  </component>
+</project>

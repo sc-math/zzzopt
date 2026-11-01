@@ -1,0 +1,9 @@
+# Sobreposição usada somente pelo script de integração, em projeto Docker separado.
+# Dados e credenciais de teste vêm do .env.example; nenhum .env privado é lido.
+services:
+  postgres:
+    restart: "no"
+    ports: !reset []
+    volumes: !reset []
+    tmpfs:
+      - /var/lib/postgresql

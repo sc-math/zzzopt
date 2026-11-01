@@ -1,0 +1,78 @@
+name: zzzopt
+
+services:
+  postgres:
+    image: postgres:18.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Preencha POSTGRES_DB no .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Preencha POSTGRES_USER no .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Preencha POSTGRES_PASSWORD no .env}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -q -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    cpus: 1.0
+    mem_limit: 512m
+
+  flyway:
+    image: redgate/flyway:13.11.1
+    profiles: [tools]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:?Preencha POSTGRES_DB no .env}
+      FLYWAY_USER: ${POSTGRES_USER:?Preencha POSTGRES_USER no .env}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:?Preencha POSTGRES_PASSWORD no .env}
+      FLYWAY_CONNECT_RETRIES: "10"
+      FLYWAY_CLEAN_DISABLED: "true"
+      FLYWAY_VALIDATE_MIGRATION_NAMING: "true"
+    volumes:
+      - ./db/migration:/flyway/sql:ro
+    # Padrão conservador da fase de estrutura; Apply-Catalog.ps1 solicita explicitamente target=2.
+    command: ["-target=1", migrate]
+    cpus: 1.0
+    mem_limit: 512m
+
+  catalog-check: &catalog-check
+    image: postgres:18.6-alpine
+    profiles: [tools]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGDATABASE: ${POSTGRES_DB:?Preencha POSTGRES_DB no .env}
+      PGUSER: ${POSTGRES_USER:?Preencha POSTGRES_USER no .env}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Preencha POSTGRES_PASSWORD no .env}
+    volumes:
+      - ./db/checks:/checks:ro
+    entrypoint: [psql]
+    command: ["--no-psqlrc", "--set=ON_ERROR_STOP=1", "--file=/checks/catalog.sql"]
+    cpus: 0.5
+    mem_limit: 128m
+
+  base-stats-check:
+    <<: *catalog-check
+    command: ["--no-psqlrc", "--set=ON_ERROR_STOP=1", "--file=/checks/agent-base-stats.sql"]
+
+  schema-check:
+    <<: *catalog-check
+    command: ["--no-psqlrc", "--set=ON_ERROR_STOP=1", "--file=/checks/schema.sql"]
+
+  load-check:
+    <<: *catalog-check
+    command: ["--no-psqlrc", "--set=ON_ERROR_STOP=1", "--file=/checks/catalog-load.sql"]
+
+  v3-check:
+    <<: *catalog-check
+    command: ["--no-psqlrc", "--set=ON_ERROR_STOP=1", "--file=/checks/catalog-v3.sql"]
+
+volumes:
+  postgres-data:
